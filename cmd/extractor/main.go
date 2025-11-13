@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"os"
@@ -26,11 +27,11 @@ func main() {
 
 	slog.Info("config loaded", "cfg", cfg)
 
-	kafkaWriter := kafka.NewWriter(kafka.WriterConfig{
-		Brokers:  brokers,
+	kafkaWriter := &kafka.Writer{
+		Addr:     kafka.TCP(brokers...),
 		Topic:    cfg.KafkaTopic,
 		Balancer: &kafka.Hash{},
-	})
+	}
 	defer kafkaWriter.Close()
 
 	req, err := http.NewRequestWithContext(ctx, "GET", cfg.SseSource, nil)
@@ -62,7 +63,13 @@ func main() {
 
 		raw := strings.TrimPrefix(line, "data: ")
 
-		slog.Info("data", "raw", raw)
+		var parsedJson map[string]any
+		if err := json.Unmarshal([]byte(raw), &parsedJson); err != nil {
+			slog.Error("failed to parse JSON", "error", err)
+			continue
+		}
+
+		slog.Info("data", "wiki", parsedJson["wiki"])
 
 		msg := kafka.Message{
 			Value: []byte(raw),

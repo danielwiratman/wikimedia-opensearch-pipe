@@ -9,6 +9,10 @@ type Config struct {
 	KafkaTopic   string `env:"KAFKA_TOPIC"`
 	KafkaBrokers string `env:"KAFKA_BROKERS"`
 	SseSource    string `env:"SSE_SOURCE"`
+
+	OpensearchURL      string `env:"OPENSEARCH_URL"`
+	OpensearchUsername string `env:"OPENSEARCH_USERNAME"`
+	OpensearchPassword string `env:"OPENSEARCH_PASSWORD"`
 }
 
 func Load() (*Config, error) {

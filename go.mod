@@ -5,6 +5,7 @@ go 1.25.3
 require (
 	github.com/caarlos0/env/v11 v11.3.1
 	github.com/joho/godotenv v1.5.1
+	github.com/opensearch-project/opensearch-go/v4 v4.5.0
 	github.com/segmentio/kafka-go v0.4.49
 )
 
