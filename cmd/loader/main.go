@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"os"
@@ -50,18 +51,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	slog.Info("cluster info", "cluster_name", infoResp.ClusterName, "cluster_uuid", infoResp.ClusterUUID)
+	slog.Info("connection to opensearch established", "cluster_name", infoResp.ClusterName)
 
 	var wg sync.WaitGroup
 	for i := 0; i < cfg.NumConsumers; i++ {
 		wg.Go(func() {
-			runConsumer(i, cfg, ctx)
+			runConsumer(i, cfg, ctx, osClient)
 		})
 	}
 	wg.Wait()
 }
 
-func runConsumer(id int, cfg *config.Config, ctx context.Context) {
+func runConsumer(id int, cfg *config.Config, ctx context.Context, osClient *opensearchapi.Client) {
 	slog.Info("starting consumer", "id", id)
 
 	kafkaReader := kafka.NewReader(kafka.ReaderConfig{
@@ -79,5 +80,35 @@ func runConsumer(id int, cfg *config.Config, ctx context.Context) {
 		}
 
 		slog.Info("message", "partition", msg.Partition, "offset", msg.Offset, "key", msg.Key)
+
+		parsedJson := make(map[string]any)
+		if err := json.Unmarshal(msg.Value, &parsedJson); err != nil {
+			slog.Error("failed to parse JSON", "error", err)
+			continue
+		}
+
+		meta, ok := parsedJson["meta"].(map[string]any)
+		if !ok {
+			slog.Error("missing or invalid meta object")
+			continue
+		}
+
+		metaID, ok := meta["id"].(string)
+		if !ok {
+			slog.Error("missing or invalid meta.id")
+			continue
+		}
+
+		resp, err := osClient.Index(ctx, opensearchapi.IndexReq{
+			Index:      "wikimedia",
+			DocumentID: metaID,
+			Body:       strings.NewReader(string(msg.Value)),
+		})
+		if err != nil {
+			slog.Error("failed to index document", "error", err)
+			continue
+		}
+
+		slog.Info("document indexed", "id", resp.ID, "version", resp.Version)
 	}
 }

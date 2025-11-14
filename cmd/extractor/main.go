@@ -63,16 +63,27 @@ func main() {
 
 		raw := strings.TrimPrefix(line, "data: ")
 
-		var parsedJson map[string]any
+		parsedJson := make(map[string]any)
 		if err := json.Unmarshal([]byte(raw), &parsedJson); err != nil {
 			slog.Error("failed to parse JSON", "error", err)
 			continue
 		}
 
-		slog.Info("data", "wiki", parsedJson["wiki"])
+		meta, ok := parsedJson["meta"].(map[string]any)
+		if !ok {
+			slog.Error("missing or invalid meta object")
+			continue
+		}
+
+		metaID, ok := meta["id"].(string)
+		if !ok {
+			slog.Error("missing or invalid meta.id")
+			continue
+		}
+
+		slog.Info("message", "id", metaID)
 
 		msg := kafka.Message{
-			Key:   []byte(parsedJson["wiki"].(string)),
 			Value: []byte(raw),
 		}
 
