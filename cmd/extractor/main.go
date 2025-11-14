@@ -72,6 +72,7 @@ func main() {
 		slog.Info("data", "wiki", parsedJson["wiki"])
 
 		msg := kafka.Message{
+			Key:   []byte(parsedJson["wiki"].(string)),
 			Value: []byte(raw),
 		}
 

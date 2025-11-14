@@ -13,6 +13,8 @@ type Config struct {
 	OpensearchURL      string `env:"OPENSEARCH_URL"`
 	OpensearchUsername string `env:"OPENSEARCH_USERNAME"`
 	OpensearchPassword string `env:"OPENSEARCH_PASSWORD"`
+
+	NumConsumers int `env:"NUM_CONSUMERS"`
 }
 
 func Load() (*Config, error) {
